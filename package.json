@@ -1,6 +1,6 @@
 {
   "name": "dsh-reasoning-dial",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "让任意自定义 API 模型都能声明并选择推理等级：直接编辑 llm-pi-ai 等自定义 provider 目录里每个模型的 reasoningEfforts，把官方那套 Off/Low/Medium/High/XHigh/Max 拨盘扩展到任何自定义 API 模型上。",
   "keywords": [

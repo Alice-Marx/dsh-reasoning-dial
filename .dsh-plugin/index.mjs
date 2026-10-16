@@ -4,33 +4,45 @@
  * Problem it solves
  * ----------------
  * DSH ships an Off/Low/Medium/High/XHigh/Max reasoning dial, but it is only
- * offered for models whose catalog entry declares `reasoningEfforts`. The
- * built-in DeepSeek routes declare it; every *custom* API provider you add
- * under `llm-pi-ai` (StepFun, GPT-compatible gateways, your own gateway, ...)
- * ships with the field absent, so the picker silently offers nothing and the
- * dial cannot be set.
+ * offered for models whose catalog entry declares `reasoningEfforts`. Custom
+ * API providers you add under `llm-pi-ai` usually ship with the field absent,
+ * so the picker silently offers nothing and the dial cannot be set.
+ *
+ * Where the catalog actually lives
+ * --------------------------------
+ * A provider can be declared in EITHER of two places, and both feed the same
+ * resolved view the picker reads:
+ *
+ *   1. the profile's cordis.patch.yml (`- id: llm-pi-ai` -> config.providers)
+ *   2. the settings store (`ctx.settings.get('llm-pi-ai')`)
+ *
+ * 0.1.0 only read (2) and therefore reported an empty list on installs where
+ * every custom provider is declared in (1) — which is the default. 0.1.1 reads
+ * both and merges them, settings winning per provider, so discovery works on
+ * either layout.
  *
  * What this plugin does
  * ---------------------
  * It treats the reasoning dial as plain settings data instead of a built-in
  * capability:
  *
- *   - reads `llm-pi-ai.providers.<name>.models[]` through the settings service
+ *   - discovers every provider/model from config + settings
  *   - writes `reasoningEfforts` onto any model entry you name
  *   - writes `agent-default-model.reasoningEffort` to pick the active level
  *   - optionally probes the model live to see whether the level is honoured
  *
  * The declaration is a *claim about the wire*, not magic: `reasoningEfforts`
- * maps a level to the exact spelling your provider expects on the wire
- * (`low -> "low"`, `high -> "high"`, or `low -> "reasoning_effort=low"`,
- * whatever your gateway wants). The plugin never invents a spelling — it
- * defaults to the identity mapping, which is what OpenAI-style APIs use, and
- * lets you override every entry.
+ * maps a level to the exact spelling your provider expects (`low -> "low"`, or
+ * `low -> "reasoning_effort=low"`, whatever your gateway wants). The plugin
+ * never invents a spelling — it defaults to the identity mapping and lets you
+ * override every entry.
  *
  * It never writes outside the configured settings namespaces and never touches
  * credentials.
  */
 import z from '@deepseek-ai/schemastery'
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 
 /** Cordis plugin name; equals the entry id in cordis.patch.yml. */
 export const name = 'reasoning-dial'
@@ -41,7 +53,7 @@ export const inject = ['tools', 'llm', 'settings']
 const ALL_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']
 /** What a fresh declaration starts from: the OpenAI-style ladder. */
 const DEFAULT_LADDER = ['off', 'low', 'medium', 'high', 'max']
-/** Settings namespace that owns custom-API providers. */
+/** Settings namespace / patch entry that owns custom-API providers. */
 const DEFAULT_NAMESPACE = 'llm-pi-ai'
 /** Settings entry that carries the session default route. */
 const DEFAULT_MODEL_ENTRY = 'agent-default-model'
@@ -53,10 +65,11 @@ export const Config = z.object({
   autoDeclare: z.boolean().default(false).description('启动时自动给所有还没声明 reasoningEfforts 的自定义模型补上默认档位。关着更安全：默认只在你要的时候写。'),
   allowProbe: z.boolean().default(true).description('允许 reasoning_probe 真的向模型发一条最小请求来验证档位是否生效。关掉后该工具只做静态检查、不发任何网络请求。'),
   agentTools: z.boolean().default(true).description('向 Agent 注册 reasoning_* 工具。'),
+  readProfileConfig: z.boolean().default(true).description('除了 settings 存储，也读取本 profile 的 cordis.patch.yml 里同名 entry 的 config.providers。自定义 provider 常常只声明在 patch 里，关掉这个会漏掉它们。'),
 }).description('推理等级万能拨盘')
 
 // ---------------------------------------------------------------------------
-// Small helpers. Everything here is pure or settings-only; no network, no fs.
+// Small helpers. Everything here is pure or settings-only; no network.
 // ---------------------------------------------------------------------------
 
 const text = value => (typeof value === 'string' && value.trim() ? value.trim() : null)
@@ -67,7 +80,6 @@ function splitList(value, fallback) {
     .map(item => item.trim())
     .filter(Boolean)
   const kept = items.filter(item => ALL_LEVELS.includes(item))
-  // De-duplicate while keeping the caller's order.
   return kept.length ? [...new Set(kept)] : fallback
 }
 
@@ -83,8 +95,8 @@ function isPlainObject(value) {
 /**
  * Resolve the settings document out of whatever shape the service returned.
  * The host may hand back the section directly, or a `{ value, revision }`
- * envelope, or a `{ user, revision }` pair (the shape the official pi-ai card
- * reads). All three are accepted so a host upgrade cannot break the plugin.
+ * envelope, or a `{ user, revision }` pair. All three are accepted so a host
+ * upgrade cannot break the plugin.
  */
 function unwrapSettings(payload) {
   if (!isPlainObject(payload)) return { root: null, revision: null }
@@ -169,6 +181,73 @@ function withEfforts(entry, mode, levels, wireMode) {
 }
 
 // ---------------------------------------------------------------------------
+// Profile config layer (0.1.1)
+//
+// A provider declared in the profile's cordis.patch.yml never appears in the
+// settings store, so a settings-only read reports nothing. We locate the
+// owning profile from our own install path and parse the patch for the same
+// namespace, then merge. Parsing is best-effort: without a YAML parser we
+// simply skip the layer and say so in the scan output.
+// ---------------------------------------------------------------------------
+
+/**
+ * `<profile>/node_modules/<pkg>/.dsh-plugin/index.mjs` -> `<profile>`
+ *
+ * Tail layout:  ... <profile> / node_modules / <pkg> / .dsh-plugin / index.mjs
+ * `.dsh-plugin` sits three entries above the profile, so the profile is the
+ * slice ending two before it.
+ */
+function profileDirOf() {
+  try {
+    const here = fileURLToPath(import.meta.url)          // .../.dsh-plugin/index.mjs
+    const parts = here.split(/[\\/]+/)
+    const at = parts.lastIndexOf('.dsh-plugin')
+    if (at < 4) return null
+    return parts.slice(0, at - 2).join('\\')
+  } catch { return null }
+}
+
+/** `{ <providerName>: section }` from every matching patch entry. */
+function providersFromPatch(doc) {
+  const out = {}
+  for (const entry of Array.isArray(doc) ? doc : []) {
+    if (!isPlainObject(entry) || entry.id !== DEFAULT_NAMESPACE) continue
+    const providers = entry?.config?.providers
+    if (isPlainObject(providers)) Object.assign(out, providers)
+  }
+  return out
+}
+
+/** Profile patch layer, plus why it is empty when it is. */
+let patchCache = null
+
+async function profileProviders() {
+  if (patchCache !== null) return patchCache
+  patchCache = { providers: {}, reason: 'not-attempted' }
+  try {
+    const dir = profileDirOf()
+    if (!dir) { patchCache.reason = 'profile-dir-unresolved'; return patchCache }
+    const file = `${dir}\\cordis.patch.yml`
+    let raw
+    try { raw = await readFile(file, 'utf8') } catch {
+      patchCache.reason = `no patch file at ${file}`
+      return patchCache
+    }
+    try {
+      const YAML = await import('yaml')
+      patchCache.providers = providersFromPatch(YAML.parse(raw))
+      patchCache.reason = 'ok'
+    } catch (error) {
+      // Reported, never guessed: a half-parsed patch would be worse than none.
+      patchCache.reason = `yaml-unavailable: ${String(error?.message ?? error).slice(0, 120)}`
+    }
+  } catch (error) {
+    patchCache.reason = `error: ${String(error?.message ?? error).slice(0, 120)}`
+  }
+  return patchCache
+}
+
+// ---------------------------------------------------------------------------
 // Settings access. Feature-detected so an unfamiliar host build degrades to a
 // clear "cannot write" report instead of a crash.
 // ---------------------------------------------------------------------------
@@ -201,7 +280,6 @@ async function writeModels(ctx, entryId, path, entries, revision) {
   const op = { op: 'set', path: [...path, 'models'], value: entries }
   if (typeof service.mutate === 'function') return await service.mutate(entryId, [op], revision)
   if (typeof service.update === 'function') {
-    // The update() shape takes a plain patch; rebuild the same nesting.
     let patch = { models: entries }
     for (const key of [...path].reverse()) patch = { [key]: patch }
     return await service.update(entryId, patch, revision)
@@ -209,7 +287,6 @@ async function writeModels(ctx, entryId, path, entries, revision) {
   throw new Error('settings 服务没有 mutate/update')
 }
 
-/** Namespaces this plugin is allowed to touch, from config. */
 function namespacesOf(config) {
   return splitList(config?.namespaces, [DEFAULT_NAMESPACE])
 }
@@ -274,20 +351,54 @@ function buildTools({ ctx, config }) {
   const levels = () => levelsOf(config)
   const wireMode = () => wireModeOf(config)
 
+  /**
+   * Merged provider view for one namespace: the profile patch supplies the
+   * base, the settings store overrides it per provider (the same precedence
+   * the host's resolved view uses).
+   */
+  async function mergedProviders(entryId) {
+    const { root, revision, available } = await readSettings(ctx, entryId)
+    const fromSettings = isPlainObject(root?.providers) ? root.providers : {}
+    const patch = config?.readProfileConfig === false
+      ? { providers: {}, reason: 'disabled' }
+      : await profileProviders()
+    const merged = {}
+    for (const [name, section] of Object.entries(patch.providers)) merged[name] = section
+    for (const [name, section] of Object.entries(fromSettings)) merged[name] = section
+    return {
+      providers: merged,
+      revision,
+      settingsAvailable: available,
+      settingsProviders: Object.keys(fromSettings).length,
+      patchProviders: Object.keys(patch.providers).length,
+      patchReason: patch.reason,
+    }
+  }
+
   /** Every model in every configured namespace, merged with host route info. */
   async function collect() {
     const { available, routes } = await discoverRoutes(ctx)
     const routeKey = route => `${route.provider}/${route.model}`
     const byKey = new Map(routes.map(route => [routeKey(route), route]))
     const out = []
+    const layers = []
     for (const entryId of namespacesOf(config)) {
-      const { root, revision, available: settingsOk } = await readSettings(ctx, entryId)
-      const providers = isPlainObject(root?.providers) ? root.providers : {}
+      const { providers, revision, settingsAvailable, settingsProviders, patchProviders, patchReason } =
+        await mergedProviders(entryId)
+      layers.push({
+        namespace: entryId,
+        settingsAvailable,
+        settingsProviders,
+        patchProviders,
+        patchReason,
+        mergedProviders: Object.keys(providers).length,
+      })
       for (const [providerName, section] of Object.entries(providers)) {
         const entries = modelsArrayOf(section?.models)
+        const seen = new Set()
         for (const entry of entries) {
-          const key = `${providerName}/${entry.id}`
-          const route = byKey.get(key)
+          seen.add(entry.id)
+          const route = byKey.get(`${providerName}/${entry.id}`)
           out.push({
             namespace: entryId,
             provider: providerName,
@@ -299,13 +410,12 @@ function buildTools({ ctx, config }) {
             declared: declaredLevelsOf(entry),
             mode: effortsModeOf(entry),
             issue: validateEntry(entry),
-            ...(settingsOk ? {} : { settingsUnreadable: true }),
           })
         }
-        // Providers the host knows about but the namespace does not list.
+        // Routes the host knows but the namespace does not list.
         for (const [key, route] of byKey) {
           if (!key.startsWith(`${providerName}/`)) continue
-          if (entries.some(entry => `${providerName}/${entry.id}` === key)) continue
+          if (seen.has(route.model)) continue
           out.push({
             namespace: entryId,
             provider: providerName,
@@ -321,16 +431,16 @@ function buildTools({ ctx, config }) {
         }
       }
     }
-    return { routesAvailable: available, models: out, namespaces: namespacesOf(config) }
+    return { routesAvailable: available, layers, models: out, namespaces: namespacesOf(config) }
   }
 
   /** Rewrite one provider's whole `models` array with a patched entry. */
   async function patchEntry(entryId, providerName, patch) {
-    const { root, revision } = await readSettings(ctx, entryId)
-    if (!root) throw new Error(`读不到设置命名空间 ${entryId}（可能未配置或无权限）`)
-    const providers = isPlainObject(root.providers) ? root.providers : {}
+    const { providers, revision } = await mergedProviders(entryId)
     const section = providers[providerName]
-    if (!isPlainObject(section)) throw new Error(`命名空间 ${entryId} 下没有 provider「${providerName}」`)
+    if (!isPlainObject(section)) {
+      throw new Error(`命名空间 ${entryId} 下没有 provider「${providerName}」（已合并 settings 与 profile patch 两个来源）`)
+    }
     const entries = modelsArrayOf(section.models)
     const index = entries.findIndex(entry => entry.id === patch.model)
     if (index < 0) throw new Error(`provider「${providerName}」下没有模型「${patch.model}」`)
@@ -352,13 +462,16 @@ function buildTools({ ctx, config }) {
       async execute() {
         try {
           const result = await collect()
+          const missing = result.models.filter(m => m.mode === 'inherit' || m.mode === 'absent')
           return {
             ok: true,
             ...result,
             availableLevels: levels(),
-            hint: result.models.some(m => m.mode === 'inherit' || m.mode === 'absent')
-              ? '有模型还没声明 reasoningEfforts，所以模型选择器不给它们推理档位。用 reasoning_declare 补上即可。'
-              : '所有列出的模型都已声明推理等级。',
+            hint: result.models.length === 0
+              ? `一个模型都没发现。诊断：settings 里有 ${result.layers[0]?.settingsProviders ?? 0} 个 provider，profile patch 里有 ${result.layers[0]?.patchProviders ?? 0} 个（原因：${result.layers[0]?.patchReason ?? '?'}）。patch 有 provider 但模型为空说明 YAML 解析失败；两个都是 0 说明命名空间 ${DEFAULT_NAMESPACE} 下确实没有自定义 provider。`
+              : missing.length
+                ? `${missing.length} 个模型还没声明 reasoningEfforts，所以模型选择器不给它们推理档位。用 reasoning_declare 补上即可。`
+                : '所有列出的模型都已声明推理等级。',
           }
         } catch (error) {
           return { ok: false, error: String(error?.message ?? error) }
@@ -373,7 +486,7 @@ function buildTools({ ctx, config }) {
         type: 'object',
         additionalProperties: false,
         properties: {
-          provider: { type: 'string', description: '自定义 provider 名，llm-pi-ai.providers 下的键，例如 gptcodex。' },
+          provider: { type: 'string', description: '自定义 provider 名，llm-pi-ai.providers 下的键，例如 stepfun。' },
           model: { type: 'string', description: '模型 id，必须已存在于该 provider 的 models 数组里。' },
           mode: { type: 'string', description: 'levels | none | inherit', enum: ['levels', 'none', 'inherit'] },
           levels: { type: 'array', items: { type: 'string' }, description: 'mode=levels 时提供哪些档位，例如 ["off","low","medium","high","max"]。省略则用插件默认阶梯。' },
@@ -391,12 +504,16 @@ function buildTools({ ctx, config }) {
         const mode = ['levels', 'none', 'inherit'].includes(args?.mode) ? args.mode : 'levels'
         const entryId = text(args?.namespace) ?? namespacesOf(config)[0]
         try {
-          const { root, revision } = await readSettings(ctx, entryId)
-          if (!root) return { ok: false, error: `读不到设置命名空间 ${entryId}` }
-          const providers = isPlainObject(root.providers) ? root.providers : {}
+          const { providers } = await mergedProviders(entryId)
           const entries = modelsArrayOf(providers[provider]?.models)
           const current = entries.find(entry => entry.id === model)
-          if (!current) return { ok: false, error: `provider「${provider}」下没有模型「${model}」` }
+          if (!current) {
+            const known = Object.keys(providers)
+            return {
+              ok: false,
+              error: `provider「${provider}」下没有模型「${model}」。当前可见 provider：${known.join(', ') || '(无)'}`,
+            }
+          }
 
           let next
           if (mode === 'inherit') {
@@ -423,7 +540,7 @@ function buildTools({ ctx, config }) {
             ...result,
             declared: declaredLevelsOf(next),
             mode: effortsModeOf(next),
-            note: '已写入设置。重启或刷新会话后，模型选择器的推理等级下拉框就会出现。',
+            note: '已写入 settings（会覆盖 profile patch 里的同名声明）。重启或刷新会话后，模型选择器的推理等级下拉框就会出现。',
           }
         } catch (error) {
           return { ok: false, error: String(error?.message ?? error) }
@@ -455,7 +572,6 @@ function buildTools({ ctx, config }) {
         const model = text(args?.model)
         try {
           const { root, revision } = await readSettings(ctx, DEFAULT_MODEL_ENTRY)
-          if (!root) return { ok: false, error: `读不到设置项 ${DEFAULT_MODEL_ENTRY}` }
           const current = isPlainObject(root) ? root : {}
           const next = {
             provider: provider ?? current.provider,
