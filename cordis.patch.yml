@@ -1,0 +1,8 @@
+# dsh-reasoning-dial bundle layer.
+#
+# Mounted by `dsh plugin add <path>` or the 设置 → 插件 → 添加插件 page,
+# so a profile gets this row without manual cordis.patch.yml edits.
+# A profile-level patch can still disable the row by id.
+- insert:
+    - id: reasoning-dial
+      name: dsh-reasoning-dial

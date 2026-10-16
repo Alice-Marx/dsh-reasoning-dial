@@ -1,0 +1,39 @@
+{
+  "name": "dsh-reasoning-dial",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "让任意自定义 API 模型都能声明并选择推理等级：直接编辑 llm-pi-ai 等自定义 provider 目录里每个模型的 reasoningEfforts，把官方那套 Off/Low/Medium/High/XHigh/Max 拨盘扩展到任何自定义 API 模型上。",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "reasoning-effort",
+    "llm-pi-ai",
+    "custom-api"
+  ],
+  "main": "./.dsh-plugin/index.mjs",
+  "exports": {
+    ".": "./.dsh-plugin/index.mjs",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    ".dsh-plugin/index.mjs",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/schemastery": "~3.18.4"
+  }
+}
