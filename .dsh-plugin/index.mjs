@@ -771,7 +771,11 @@ function buildTools({ ctx, config }) {
       async execute() {
         try {
           const result = await collect()
-          const missing = result.models.filter(m => m.mode === 'inherit' || m.mode === 'absent')
+          // Only a model with no offerable level is actually a problem: a route
+          // the host catalog already describes keeps its dial without any
+          // declaration from us.
+          const silent = result.models.filter(model => model.dialEfforts.length === 0)
+          const silentDeclarable = silent.filter(model => model.routeKnown)
           const access = settingsAccess(ctx)
           const layer = result.layers[0]
           return {
@@ -781,9 +785,9 @@ function buildTools({ ctx, config }) {
             availableLevels: levels(),
             hint: result.models.length === 0
               ? '一个模型都没发现。诊断：settings 里有 ' + (layer?.settingsProviders ?? 0) + ' 个 provider（读取方式 ' + (layer?.settingsVia ?? '?') + '，错误：' + (layer?.settingsError ?? '无') + '），profile patch 里有 ' + (layer?.patchProviders ?? 0) + ' 个（原因：' + (layer?.patchReason ?? '?') + '）。两边都是 0 说明命名空间 ' + DEFAULT_NAMESPACE + ' 下确实没有自定义 provider。'
-              : missing.length
-                ? missing.length + ' 个模型还没声明 reasoningEfforts，所以模型选择器不给它们推理档位。用 reasoning_declare 补上即可。'
-                : '所有列出的模型都已声明推理等级。',
+              : silent.length
+                ? silentDeclarable.length + ' 个模型没有任何可选项，所以模型选择器不给它们推理档位（其余 ' + (silent.length - silentDeclarable.length) + ' 个是宿主路由里没列出的模型）。用 reasoning_declare 给要用的那批补上即可。'
+                : '所有列出的模型都有可选档位。',
           }
         } catch (error) {
           return { ok: false, error: messageOf(error) }
