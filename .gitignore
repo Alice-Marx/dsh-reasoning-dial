@@ -16,3 +16,6 @@ Thumbs.db
 # never publish local scratch or credentials
 .workshop/
 *token*.txt
+
+# release notes scratch
+.git-release-notes.md
