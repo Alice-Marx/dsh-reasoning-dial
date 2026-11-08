@@ -29,6 +29,7 @@
     "README.md",
     "README.zh.md",
     "CHANGELOG.md",
+    "test/plugin.test.mjs",
     "LICENSE"
   ],
   "scripts": {
@@ -41,5 +42,13 @@
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.0.4",
     "@deepseek-ai/schemastery": "~3.18.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alice-Marx/dsh-reasoning-dial.git"
+  },
+  "homepage": "https://github.com/Alice-Marx/dsh-reasoning-dial#readme",
+  "bugs": {
+    "url": "https://github.com/Alice-Marx/dsh-reasoning-dial/issues"
   }
 }
