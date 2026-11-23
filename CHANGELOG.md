@@ -8,7 +8,9 @@
 
 - `reasoning_probe` 读取流式响应的结束原因时用了 `finishReason` 字段名，而宿主的
   `finish` 事件字段是 `reason` —— 探测结果里 `finish` 永远显示 `unknown`。
-  现在优先读 `reason`，`finishReason` 兜底。
+  新宿主的 `reason` 是 `{kind, failure?}` 对象：现在取 `kind` 写入结果，
+  `error`/`aborted` 计为该档请求失败（不再被当成成功参与两档对比），
+  旧字符串字段继续兜底。
 
 ### Changed
 

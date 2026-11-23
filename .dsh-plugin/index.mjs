@@ -994,9 +994,22 @@ function buildTools({ ctx, config }) {
             })
             let answer = ''
             let finish = 'unknown'
+            let streamError = null
             for await (const chunk of stream) {
               if (chunk?.type === 'text-delta' && typeof chunk.text === 'string') answer += chunk.text
-              if (chunk?.type === 'finish') finish = chunk.reason ?? chunk.finishReason ?? finish
+              if (chunk?.type === 'finish') {
+                // New hosts put a FinishReason object on `reason` ({kind}, plus
+                // `failure` on error/aborted); older builds used a string field.
+                const reason = chunk.reason ?? chunk.finishReason
+                const kind = typeof reason === 'string' ? reason : reason?.kind
+                if (kind) finish = kind
+                if ((kind === 'error' || kind === 'aborted') && isPlainObject(reason)) {
+                  streamError = messageOf(reason.failure) || 'stream finished with ' + kind
+                }
+              }
+            }
+            if (streamError) {
+              return { ok: false, effort, ms: Date.now() - started, error: streamError, finish }
             }
             return { ok: true, effort, ms: Date.now() - started, chars: answer.length, finish, sample: answer.slice(0, 200) }
           } catch (error) {
