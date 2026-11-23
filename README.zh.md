@@ -21,6 +21,9 @@ DSH 自带 Off / Low / Medium / High / XHigh / Max 推理档位，但这个拨�
 
 ## 0.3.0 修了什么（重要）
 
+> 0.3.1：验证兼容 **dsh 0.2.2-rc.5** 宿主（不声明 `dsh-*` peer，rc.5 的版本门
+> 无可拒绝项；顺带修正 `reasoning_probe` 结束原因字段名 `reason`）。
+
 0.2.x 在**新宿主上完全写不进去**：宿主 `dsh-settings` 的服务代际换了 ——
 不再有 `get()/read()`，改成 `describe()` 返回
 `[{ ns, revision, value, user, base, applies }]`，写入是
@@ -47,12 +50,10 @@ stepfun 之类的自定义 provider 也就永远拿不到 `reasoningEfforts`。
 
 ## 0.4.0 适配最新版宿主
 
-peer 依赖放宽到 cordis `~4.0.4 || ~4.1.0`、schemastery `~3.18.4 || ~3.19.0`，
-并补齐 `dsh-llm` / `dsh-settings` / `dsh-tools` 的宿主版本声明
-（`0.2.0-rc.1` ~ `0.2.3-alpha.2`）。最新版 dsh（0.2.2-rc.5）已升级到
-cordis 4.1.0 / schemastery 3.19.0，旧区间会被宿主判为不兼容；
-插件代码本身不需要改动，宿主服务接口（`describe()`、`resolveModelInfo()`、
-`reasoningEfforts` 规则）在最新版均未变。
+合并 0.3.1 的 rc.5 适配并补核对 **0.2.3-alpha.x** 代际：`describe()`/`mutate()`、
+`resolveModelInfo()`、`reasoningEfforts` 规则与 `tools.register(ToolDefinition)`
+均未变。无行为变更；依赖面沿用 0.3.1 的决定（不声明 `dsh-*` peer，宿主版本门
+无可拒绝项；schemastery 走 `dependencies`）。
 
 ## 安装
 

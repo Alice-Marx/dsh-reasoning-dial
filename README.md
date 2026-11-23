@@ -24,6 +24,10 @@ This plugin treats the dial as **ordinary settings data** instead of a built-in 
 
 ## What 0.3.0 fixes
 
+> 0.3.1: verified compatible with the **dsh 0.2.2-rc.5** host (no `dsh-*` peers are
+> declared, so rc.5's version gate has nothing to reject; also fixes `reasoning_probe`
+> reading the finish event's `reason` field).
+
 0.2.x **could not write at all on a current host**. `dsh-settings` changed its service
 generation: it no longer exposes `get()/read()`, and instead publishes
 `describe() -> [{ ns, revision, value, user, base, applies }]` with
@@ -49,14 +53,15 @@ so a third-party Step key never received `reasoningEfforts` and never got a dial
 7. **Default ladder narrowed to `off,low,medium,high`**: `xhigh`/`max` appear only when you
    name them (host rule), so providers that never heard of `Max` no longer get a fake option.
 
-## What 0.4.0 adapts
+## What 0.4.0 adds
 
-Peer ranges widened to cordis `~4.0.4 || ~4.1.0` and schemastery
-`~3.18.4 || ~3.19.0`, plus explicit `dsh-llm` / `dsh-settings` / `dsh-tools` host
-version declarations (`0.2.0-rc.1` through `0.2.3-alpha.2`). The latest dsh
-(0.2.2-rc.5) ships cordis 4.1.0 / schemastery 3.19.0, which the old pins rejected;
-the plugin code itself needed no changes — `describe()`, `resolveModelInfo()`, and
-the `reasoningEfforts` rules are unchanged on the newest host.
+Consolidates 0.3.1's rc.5 adaptation and additionally verifies the
+**0.2.3-alpha.x** host generation: `describe()`/`mutate()`,
+`resolveModelInfo()`, the `reasoningEfforts` rules, and
+`tools.register(ToolDefinition)` are all unchanged there. No behavioral
+changes; the dependency surface stays as 0.3.1 decided (no `dsh-*` peers so
+the host's version gate has nothing to reject, schemastery as a real
+`dependencies` entry).
 
 ## Install
 

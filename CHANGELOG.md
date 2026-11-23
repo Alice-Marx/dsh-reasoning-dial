@@ -2,28 +2,51 @@
 
 ## 0.4.0
 
-适配最新版 dsh（0.2.2-rc.5 / 0.2.3-alpha.x）的宿主依赖面。
-
-### Changed
-
-- `peerDependencies` 放宽：`@deepseek-ai/cordis` `~4.0.4 || ~4.1.0`、
-  `@deepseek-ai/schemastery` `~3.18.4 || ~3.19.0` —— 最新宿主已升级到
-  cordis 4.1.0 / schemastery 3.19.0，原先的 `~4.0.4` / `~3.18.4` 区间不含它们，
-  插件安装/加载时会被宿主判为不兼容。
-- 新增 `dsh-llm` / `dsh-settings` / `dsh-tools` 的 peer 声明，覆盖
-  `0.2.0-rc.1` 至 `0.2.3-alpha.2` 的宿主版本，与 dsh-model-router 的声明口径一致。
+合并 0.3.1 的 rc.5 适配并补核对 `0.2.3-alpha.x` 宿主；无行为变更，
+沿用 0.3.1 的依赖面决定（不声明 `dsh-*` peer、schemastery 走 `dependencies`）。
 
 ### Verified
 
-- 对照 `@deepseek-ai/dsh-settings@0.2.2-rc.5` 与 `@0.2.3-alpha.2` 源码：
+- 对照 `@deepseek-ai/dsh-settings@0.2.3-alpha.2` 源码：
   `describe()/mutate()/update()/replace()`、`SETTINGS_CONFLICT`、
-  `applies: 'live'` 均未变。
-- 对照 `@deepseek-ai/dsh-llm`：`listProviders()/listModels()/resolveModelInfo()`
-  与 `reasoning.efforts[].id` 形状未变。
-- 对照 `@deepseek-ai/dsh-llm-pi-ai`：`reasoningEfforts` 声明与校验规则未变
-  （alpha 仅改了图片预算与凭据处理）。
-- 对照 `@deepseek-ai/dsh-tools`：`tools.register(ToolDefinition)` 契约未变。
-- 插件代码零改动；`npm test` 15 条用例全绿。
+  `applies: 'live'` 与 rc.5 一致。
+- 对照 `@deepseek-ai/dsh-llm@0.2.3-alpha.2`：`listProviders()/listModels()/
+  resolveModelInfo()` 与 `reasoning.efforts[].id` 形状未变。
+- 对照 `@deepseek-ai/dsh-llm-pi-ai@0.2.3-alpha.2`：`reasoningEfforts` 声明与
+  校验规则未变（alpha 仅改了图片预算与凭据处理）。
+- 对照 `@deepseek-ai/dsh-tools@0.2.3-alpha.2`：`tools.register(ToolDefinition)`
+  契约未变。
+- `npm test` 15 条用例全绿。
+
+## 0.3.1
+
+支持 dsh 0.2.2-rc.5 宿主。
+
+### Fixed
+
+- `reasoning_probe` 读取流式响应的结束原因时用了 `finishReason` 字段名，而宿主的
+  `finish` 事件字段是 `reason` —— 探测结果里 `finish` 永远显示 `unknown`。
+  新宿主的 `reason` 是 `{kind, failure?}` 对象：现在取 `kind` 写入结果，
+  `error`/`aborted` 计为该档请求失败（不再被当成成功参与两档对比），
+  旧字符串字段继续兜底。
+
+### Changed
+
+- `peerDependencies`：`cordis` 放宽为 `~4.0.4 || ~4.1.0`。刻意不声明
+  `@deepseek-ai/dsh-*` peer——rc.5 的 `evaluatePluginCompatibility` 会拿每个
+  `dsh-*` peer 范围和运行时版本比对，一旦列表漏掉某个版本（如 0.1.7-rc.2、
+  0.2.2-rc.4）宿主就会直接拒绝安装；不声明则恒通过，和 0.3.0 行为一致。
+  插件本就靠 feature-detect 适配两代宿主并优雅降级，不靠版本门。
+- `@deepseek-ai/schemastery` 从 peer 依赖改为 `^3.18.4` 普通依赖：profile 的
+  `autoInstallPeers: false` 不会安装 peer，静态 `import` 在全新
+  `dsh plugin add` 下会解析不到而终止整个插件。
+
+### Compatibility
+
+- 已对照 0.2.2-rc.5 的 `dsh-settings`（`describe()/mutate()/update()/replace()`）、
+  `dsh-llm`（`resolveModelInfo/stream`，`finish` 事件字段名 `reason`）、
+  `dsh-tools`（`register` 签名）与 `llm-pi-ai` / `agent-default-model` 的
+  `reasoningEfforts` 语义逐一核对，行为一致。
 
 ## 0.3.0
 
