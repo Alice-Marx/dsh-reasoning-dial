@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1
+
+### Fixed
+
+- `reasoning_patch` 与 `reasoning_declare` 附带的可粘贴 YAML 里 `off` 档输出未加
+  引号：YAML 1.1 把裸 `off`/`on`/`yes`/`no` 解析成布尔，`off: null` 落进
+  patch 文件后键变成 `false`，off 档静默丢失。现对 YAML 布尔拼写统一加单引号
+  （`'off': null`）。
+
 ## 0.4.0
 
 合并 0.3.1 的 rc.5 适配并补核对 `0.2.3-alpha.x` 宿主；无行为变更，
