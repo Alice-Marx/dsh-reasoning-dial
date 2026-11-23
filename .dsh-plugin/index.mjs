@@ -996,7 +996,7 @@ function buildTools({ ctx, config }) {
             let finish = 'unknown'
             for await (const chunk of stream) {
               if (chunk?.type === 'text-delta' && typeof chunk.text === 'string') answer += chunk.text
-              if (chunk?.type === 'finish' && chunk.finishReason) finish = chunk.finishReason
+              if (chunk?.type === 'finish') finish = chunk.reason ?? chunk.finishReason ?? finish
             }
             return { ok: true, effort, ms: Date.now() - started, chars: answer.length, finish, sample: answer.slice(0, 200) }
           } catch (error) {

@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.1
+
+支持 dsh 0.2.2-rc.5 宿主。
+
+### Fixed
+
+- `reasoning_probe` 读取流式响应的结束原因时用了 `finishReason` 字段名，而宿主的
+  `finish` 事件字段是 `reason` —— 探测结果里 `finish` 永远显示 `unknown`。
+  现在优先读 `reason`，`finishReason` 兜底。
+
+### Changed
+
+- `peerDependencies` 声明宿主兼容范围：`@deepseek-ai/dsh-llm` / `dsh-settings` /
+  `dsh-tools` 覆盖 0.2.0-rc.1 至 0.2.2-rc.5，`cordis` 放宽为 `~4.0.4 || ~4.1.0`，
+  让 rc.5 的插件兼容性检查放行。
+- `@deepseek-ai/schemastery` 从 peer 依赖改为 `^3.18.4` 普通依赖：profile 的
+  `autoInstallPeers: false` 不会安装 peer，静态 `import` 在全新
+  `dsh plugin add` 下会解析不到而终止整个插件。
+
+### Compatibility
+
+- 已对照 0.2.2-rc.5 的 `dsh-settings`（`describe()/mutate()/update()/replace()`）、
+  `dsh-llm`（`resolveModelInfo/stream`，`finish` 事件字段名 `reason`）、
+  `dsh-tools`（`register` 签名）与 `llm-pi-ai` / `agent-default-model` 的
+  `reasoningEfforts` 语义逐一核对，行为一致。
+
 ## 0.3.0
 
 修复「第三方 API key（StepFun / 自建网关等）接进来后，推理等级拨盘完全不出现」的根因，

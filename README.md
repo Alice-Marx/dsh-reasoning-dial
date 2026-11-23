@@ -24,6 +24,10 @@ This plugin treats the dial as **ordinary settings data** instead of a built-in 
 
 ## What 0.3.0 fixes
 
+> 0.3.1: declares and verifies compatibility with the **dsh 0.2.2-rc.5** host (peer
+> ranges now cover rc.5; also fixes `reasoning_probe` reading the finish event's
+> `reason` field).
+
 0.2.x **could not write at all on a current host**. `dsh-settings` changed its service
 generation: it no longer exposes `get()/read()`, and instead publishes
 `describe() -> [{ ns, revision, value, user, base, applies }]` with
