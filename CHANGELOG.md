@@ -12,9 +12,11 @@
 
 ### Changed
 
-- `peerDependencies` 声明宿主兼容范围：`@deepseek-ai/dsh-llm` / `dsh-settings` /
-  `dsh-tools` 覆盖 0.2.0-rc.1 至 0.2.2-rc.5，`cordis` 放宽为 `~4.0.4 || ~4.1.0`，
-  让 rc.5 的插件兼容性检查放行。
+- `peerDependencies`：`cordis` 放宽为 `~4.0.4 || ~4.1.0`。刻意不声明
+  `@deepseek-ai/dsh-*` peer——rc.5 的 `evaluatePluginCompatibility` 会拿每个
+  `dsh-*` peer 范围和运行时版本比对，一旦列表漏掉某个版本（如 0.1.7-rc.2、
+  0.2.2-rc.4）宿主就会直接拒绝安装；不声明则恒通过，和 0.3.0 行为一致。
+  插件本就靠 feature-detect 适配两代宿主并优雅降级，不靠版本门。
 - `@deepseek-ai/schemastery` 从 peer 依赖改为 `^3.18.4` 普通依赖：profile 的
   `autoInstallPeers: false` 不会安装 peer，静态 `import` 在全新
   `dsh plugin add` 下会解析不到而终止整个插件。
