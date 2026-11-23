@@ -21,6 +21,9 @@ DSH 自带 Off / Low / Medium / High / XHigh / Max 推理档位，但这个拨�
 
 ## 0.3.0 修了什么（重要）
 
+> 0.3.1：验证兼容 **dsh 0.2.2-rc.5** 宿主（不声明 `dsh-*` peer，rc.5 的版本门
+> 无可拒绝项；顺带修正 `reasoning_probe` 结束原因字段名 `reason`）。
+
 0.2.x 在**新宿主上完全写不进去**：宿主 `dsh-settings` 的服务代际换了 ——
 不再有 `get()/read()`，改成 `describe()` 返回
 `[{ ns, revision, value, user, base, applies }]`，写入是

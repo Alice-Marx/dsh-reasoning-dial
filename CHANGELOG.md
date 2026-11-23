@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.3.1
+
+支持 dsh 0.2.2-rc.5 宿主。
+
+### Fixed
+
+- `reasoning_probe` 读取流式响应的结束原因时用了 `finishReason` 字段名，而宿主的
+  `finish` 事件字段是 `reason` —— 探测结果里 `finish` 永远显示 `unknown`。
+  新宿主的 `reason` 是 `{kind, failure?}` 对象：现在取 `kind` 写入结果，
+  `error`/`aborted` 计为该档请求失败（不再被当成成功参与两档对比），
+  旧字符串字段继续兜底。
+
+### Changed
+
+- `peerDependencies`：`cordis` 放宽为 `~4.0.4 || ~4.1.0`。刻意不声明
+  `@deepseek-ai/dsh-*` peer——rc.5 的 `evaluatePluginCompatibility` 会拿每个
+  `dsh-*` peer 范围和运行时版本比对，一旦列表漏掉某个版本（如 0.1.7-rc.2、
+  0.2.2-rc.4）宿主就会直接拒绝安装；不声明则恒通过，和 0.3.0 行为一致。
+  插件本就靠 feature-detect 适配两代宿主并优雅降级，不靠版本门。
+- `@deepseek-ai/schemastery` 从 peer 依赖改为 `^3.18.4` 普通依赖：profile 的
+  `autoInstallPeers: false` 不会安装 peer，静态 `import` 在全新
+  `dsh plugin add` 下会解析不到而终止整个插件。
+
+### Compatibility
+
+- 已对照 0.2.2-rc.5 的 `dsh-settings`（`describe()/mutate()/update()/replace()`）、
+  `dsh-llm`（`resolveModelInfo/stream`，`finish` 事件字段名 `reason`）、
+  `dsh-tools`（`register` 签名）与 `llm-pi-ai` / `agent-default-model` 的
+  `reasoningEfforts` 语义逐一核对，行为一致。
+
 ## 0.3.0
 
 修复「第三方 API key（StepFun / 自建网关等）接进来后，推理等级拨盘完全不出现」的根因，
