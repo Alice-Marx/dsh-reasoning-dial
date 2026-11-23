@@ -348,7 +348,7 @@ test('dryRun reports the payload and the paste-ready YAML without writing', asyn
   assert.equal(result.ok, true)
   assert.equal(result.dryRun, true)
   assert.equal(host.calls.mutate.length, 0)
-  assert.match(result.results[0].patchSnippet, /off: null/)
+  assert.match(result.results[0].patchSnippet, /'off': null/)
   assert.match(result.results[0].patchSnippet, /high: "high"/)
 })
 

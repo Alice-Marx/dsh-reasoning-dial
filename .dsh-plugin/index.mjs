@@ -266,7 +266,10 @@ function patchSnippet(provider, model, entry) {
     for (const level of ALL_LEVELS) {
       if (!Object.prototype.hasOwnProperty.call(efforts, level)) continue
       const wire = efforts[level]
-      lines.push('  ' + level + ': ' + (wire === null ? 'null' : JSON.stringify(String(wire))))
+      // YAML 1.1 parses bare `off`/`on`/`yes`/`no` as booleans, which silently
+      // drops the key when pasted into a patch. Quote those spellings.
+      const key = /^(off|on|y|n|yes|no|true|false)$/i.test(level) ? `'${level}'` : level
+      lines.push('  ' + key + ': ' + (wire === null ? 'null' : JSON.stringify(String(wire))))
     }
   }
   return lines.join('\n')
