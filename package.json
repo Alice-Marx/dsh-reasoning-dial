@@ -1,6 +1,6 @@
 {
   "name": "dsh-reasoning-dial",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "description": "让任意自定义 API 模型都能声明并选择推理等级：直接编辑 llm-pi-ai 等自定义 provider 目录里每个模型的 reasoningEfforts，把官方那套 Off/Low/Medium/High/XHigh/Max 拨盘扩展到任何自定义 API 模型上。0.3.0 适配 dsh-settings 的 describe()/mutate() 宿主代际；0.3.1 起支持 dsh 0.2.2-rc.5（cordis 4.1）；0.4.0 合并核对 0.2.3-alpha.x 兼容。",
   "keywords": [
