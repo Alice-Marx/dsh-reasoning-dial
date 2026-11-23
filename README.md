@@ -49,6 +49,15 @@ so a third-party Step key never received `reasoningEfforts` and never got a dial
 7. **Default ladder narrowed to `off,low,medium,high`**: `xhigh`/`max` appear only when you
    name them (host rule), so providers that never heard of `Max` no longer get a fake option.
 
+## What 0.4.0 adapts
+
+Peer ranges widened to cordis `~4.0.4 || ~4.1.0` and schemastery
+`~3.18.4 || ~3.19.0`, plus explicit `dsh-llm` / `dsh-settings` / `dsh-tools` host
+version declarations (`0.2.0-rc.1` through `0.2.3-alpha.2`). The latest dsh
+(0.2.2-rc.5) ships cordis 4.1.0 / schemastery 3.19.0, which the old pins rejected;
+the plugin code itself needed no changes — `describe()`, `resolveModelInfo()`, and
+the `reasoningEfforts` rules are unchanged on the newest host.
+
 ## Install
 
 **UI** — Settings → Plugins → Add plugin, pick this directory.

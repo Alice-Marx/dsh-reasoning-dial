@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.0
+
+适配最新版 dsh（0.2.2-rc.5 / 0.2.3-alpha.x）的宿主依赖面。
+
+### Changed
+
+- `peerDependencies` 放宽：`@deepseek-ai/cordis` `~4.0.4 || ~4.1.0`、
+  `@deepseek-ai/schemastery` `~3.18.4 || ~3.19.0` —— 最新宿主已升级到
+  cordis 4.1.0 / schemastery 3.19.0，原先的 `~4.0.4` / `~3.18.4` 区间不含它们，
+  插件安装/加载时会被宿主判为不兼容。
+- 新增 `dsh-llm` / `dsh-settings` / `dsh-tools` 的 peer 声明，覆盖
+  `0.2.0-rc.1` 至 `0.2.3-alpha.2` 的宿主版本，与 dsh-model-router 的声明口径一致。
+
+### Verified
+
+- 对照 `@deepseek-ai/dsh-settings@0.2.2-rc.5` 与 `@0.2.3-alpha.2` 源码：
+  `describe()/mutate()/update()/replace()`、`SETTINGS_CONFLICT`、
+  `applies: 'live'` 均未变。
+- 对照 `@deepseek-ai/dsh-llm`：`listProviders()/listModels()/resolveModelInfo()`
+  与 `reasoning.efforts[].id` 形状未变。
+- 对照 `@deepseek-ai/dsh-llm-pi-ai`：`reasoningEfforts` 声明与校验规则未变
+  （alpha 仅改了图片预算与凭据处理）。
+- 对照 `@deepseek-ai/dsh-tools`：`tools.register(ToolDefinition)` 契约未变。
+- 插件代码零改动；`npm test` 15 条用例全绿。
+
 ## 0.3.0
 
 修复「第三方 API key（StepFun / 自建网关等）接进来后，推理等级拨盘完全不出现」的根因，

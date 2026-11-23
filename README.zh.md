@@ -45,6 +45,15 @@ stepfun 之类的自定义 provider 也就永远拿不到 `reasoningEfforts`。
 7. **默认阶梯收敛为 `off,low,medium,high`**：`xhigh`/`max` 只有你明确写出来才会出现在
    选择器里（宿主规则），不会再出现「选了 Max 但供应商根本没这个概念」。
 
+## 0.4.0 适配最新版宿主
+
+peer 依赖放宽到 cordis `~4.0.4 || ~4.1.0`、schemastery `~3.18.4 || ~3.19.0`，
+并补齐 `dsh-llm` / `dsh-settings` / `dsh-tools` 的宿主版本声明
+（`0.2.0-rc.1` ~ `0.2.3-alpha.2`）。最新版 dsh（0.2.2-rc.5）已升级到
+cordis 4.1.0 / schemastery 3.19.0，旧区间会被宿主判为不兼容；
+插件代码本身不需要改动，宿主服务接口（`describe()`、`resolveModelInfo()`、
+`reasoningEfforts` 规则）在最新版均未变。
+
 ## 安装
 
 插件是个标准 DSH bundle。三种方式任选：

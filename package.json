@@ -1,8 +1,8 @@
 {
   "name": "dsh-reasoning-dial",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
-  "description": "让任意自定义 API 模型都能声明并选择推理等级：直接编辑 llm-pi-ai 等自定义 provider 目录里每个模型的 reasoningEfforts，把官方那套 Off/Low/Medium/High/XHigh/Max 拨盘扩展到任何自定义 API 模型上。0.3.0 适配 dsh-settings 的 describe()/mutate() 宿主代际，修好 0.2.x 在新型宿主上完全写不进去的问题。",
+  "description": "让任意自定义 API 模型都能声明并选择推理等级：直接编辑 llm-pi-ai 等自定义 provider 目录里每个模型的 reasoningEfforts，把官方那套 Off/Low/Medium/High/XHigh/Max 拨盘扩展到任何自定义 API 模型上。0.3.0 适配 dsh-settings 的 describe()/mutate() 宿主代际；0.4.0 放宽 peer 依赖范围，适配 dsh 0.2.2-rc.5（cordis 4.1 / schemastery 3.19）等最新版宿主。",
   "keywords": [
     "deepseek-harness",
     "dsh-plugin",
@@ -40,8 +40,11 @@
     "node": ">=20"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "~4.0.4",
-    "@deepseek-ai/schemastery": "~3.18.4"
+    "@deepseek-ai/cordis": "~4.0.4 || ~4.1.0",
+    "@deepseek-ai/schemastery": "~3.18.4 || ~3.19.0",
+    "@deepseek-ai/dsh-llm": "0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.1-rc.5 || 0.2.2-rc.1 || 0.2.2-rc.2 || 0.2.2-rc.3 || 0.2.2-rc.4 || 0.2.2-rc.5 || 0.2.3-alpha.1 || 0.2.3-alpha.2",
+    "@deepseek-ai/dsh-settings": "0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.1-rc.5 || 0.2.2-rc.1 || 0.2.2-rc.2 || 0.2.2-rc.3 || 0.2.2-rc.4 || 0.2.2-rc.5 || 0.2.3-alpha.1 || 0.2.3-alpha.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.1-rc.5 || 0.2.2-rc.1 || 0.2.2-rc.2 || 0.2.2-rc.3 || 0.2.2-rc.4 || 0.2.2-rc.5 || 0.2.3-alpha.1 || 0.2.3-alpha.2"
   },
   "repository": {
     "type": "git",
